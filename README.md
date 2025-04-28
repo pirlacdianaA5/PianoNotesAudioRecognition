@@ -19,6 +19,3 @@ Acest proiect explorează tehnici avansate de inteligență artificială pentru 
 ## 🌟 Rezultate
 Modelul final demonstrează o acuratețe superioară în predicția notelor muzicale, fiind validat pe un set divers de date. Această abordare combină inovația și puterea ML pentru a transforma procesul de recunoaștere audio.
 
----
-
-Dacă dorești să ajustăm ceva sau să adăugăm detalii, sunt aici să te ajut! 😊
