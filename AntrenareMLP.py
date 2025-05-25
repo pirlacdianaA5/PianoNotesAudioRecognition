@@ -176,38 +176,47 @@ norm_layer = layers.Normalization()
 # with `Normalization.adapt`.
 norm_layer.adapt(data=train_spectrogram_ds.map(map_func=lambda spec, label: spec))
 
+# Flatten the spectrograms for MLP
+def flatten_spectrogram(ds):
+    return ds.map(
+        map_func=lambda spec, label: (tf.reshape(spec, [tf.shape(spec)[0], -1]), label),  # Use tf.shape
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+
+# Apply flattening to the datasets
+train_flat_ds = flatten_spectrogram(train_spectrogram_ds)
+val_flat_ds = flatten_spectrogram(val_spectrogram_ds)
+
+# Verify the dataset shapes
+for spec, label in train_flat_ds.take(1):
+    print("Flattened spectrogram shape:", spec.shape)  # Should be 2D (batch_size, features)
+    print("Label shape:", label.shape)
+
+# Define the MLP model
 model = models.Sequential([
-    layers.Input(shape=input_shape),
-    # Downsample the input.
-    layers.Resizing(32, 32),
-    # Normalize.
-    norm_layer,
-    layers.Conv2D(32, 3, activation='relu'),
-    layers.Conv2D(64, 3, activation='relu'),
-    layers.MaxPooling2D(),
-    layers.Dropout(0.25),
-    layers.Flatten(),
+    layers.Input(shape=(input_shape[0] * input_shape[1],)),  # Flattened input shape
+    layers.Dense(256, activation='relu'),
+    layers.Dropout(0.5),
     layers.Dense(128, activation='relu'),
     layers.Dropout(0.5),
-    layers.Dense(num_labels),
+    layers.Dense(num_labels),  # Output layer
 ])
 
-model.summary()
-
+# Compile the model
 model.compile(
     optimizer=tf.keras.optimizers.Adam(),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy'],
 )
 
+# Train the MLP model
 EPOCHS = 10
 history = model.fit(
-    train_spectrogram_ds,
-    validation_data=val_spectrogram_ds,
+    train_flat_ds,
+    validation_data=val_flat_ds,
     epochs=EPOCHS,
     callbacks=tf.keras.callbacks.EarlyStopping(verbose=1, patience=2),
 )
-
 metrics = history.history
 plt.figure(figsize=(16,6))
 plt.subplot(1,2,1)
@@ -227,14 +236,27 @@ output_path = os.path.join(output_folder, f'diagram_{i + 1}.png')
 plt.savefig(output_path)
 plt.close()
 
+for x, y in test_spectrogram_ds.take(1):
+    print("Input shape:", x.shape)
+    print("Label shape:", y.shape)
+    y_pred = model(x, training=False)
+    print("Prediction shape:", y_pred.shape)
 
-model.evaluate(test_spectrogram_ds, return_dict=True)
+# Flatten the test spectrogram dataset
+test_flat_ds = flatten_spectrogram(test_spectrogram_ds)
 
+# Evaluate the model using the flattened test dataset
+model.evaluate(test_flat_ds, return_dict=True)
 
-y_pred = model.predict(test_spectrogram_ds)
+# Predict using the flattened test dataset
+# Flatten the input spectrogram before passing it to the model
+x_flattened = tf.reshape(x, [x.shape[0], -1])  # Flatten to match the model's input shape
+y_pred = model(x_flattened, training=False)
+print("Prediction shape:", y_pred.shape)
 y_pred = tf.argmax(y_pred, axis=1)
-y_true = tf.concat(list(test_spectrogram_ds.map(lambda s,lab: lab)), axis=0)
+y_true = tf.concat(list(test_flat_ds.map(lambda s, lab: lab)), axis=0)
 
+# Confusion matrix
 confusion_mtx = tf.math.confusion_matrix(y_true, y_pred)
 plt.figure(figsize=(10, 8))
 sns.heatmap(confusion_mtx,
@@ -307,6 +329,6 @@ class ExportModel(tf.Module):
                 'class_names': class_names}
 
 export = ExportModel(model)
-tf.saved_model.save(export, "saved")
-imported = tf.saved_model.load("saved")
+tf.saved_model.save(export, "savedMLP")
+imported = tf.saved_model.load("savedMLP")
 imported(waveform[tf.newaxis, :])

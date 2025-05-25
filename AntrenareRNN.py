@@ -178,21 +178,15 @@ norm_layer.adapt(data=train_spectrogram_ds.map(map_func=lambda spec, label: spec
 
 model = models.Sequential([
     layers.Input(shape=input_shape),
-    # Downsample the input.
     layers.Resizing(32, 32),
-    # Normalize.
-    norm_layer,
-    layers.Conv2D(32, 3, activation='relu'),
-    layers.Conv2D(64, 3, activation='relu'),
-    layers.MaxPooling2D(),
-    layers.Dropout(0.25),
-    layers.Flatten(),
+    layers.Normalization(),
+    layers.Reshape((32, 32)),  # Reshape to (timesteps, features)
+    layers.SimpleRNN(64, activation='tanh', return_sequences=True),
+    layers.SimpleRNN(64, activation='tanh'),
     layers.Dense(128, activation='relu'),
     layers.Dropout(0.5),
     layers.Dense(num_labels),
 ])
-
-model.summary()
 
 model.compile(
     optimizer=tf.keras.optimizers.Adam(),
@@ -307,6 +301,6 @@ class ExportModel(tf.Module):
                 'class_names': class_names}
 
 export = ExportModel(model)
-tf.saved_model.save(export, "saved")
-imported = tf.saved_model.load("saved")
+tf.saved_model.save(export, "savedRNN")
+imported = tf.saved_model.load("savedRNN")
 imported(waveform[tf.newaxis, :])
