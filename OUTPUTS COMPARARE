@@ -1,4 +1,5 @@
 1.CNN ANTRENARE (Rețea Neuronală Convoluțională)
+-------------------------------------------------------------------------------------------------------------------
 C:\Users\Lenovo\Desktop\Licenta\PianoNotesAudioRecognition\.venv\Scripts\python.exe C:\Users\Lenovo\Desktop\Licenta\PianoNotesAudioRecognition\AntrenareDataset.py
 Commands: ['Do#0' 'Do#1' 'Do#2' 'Do#3' 'Do#4' 'Do#5' 'Do#6' 'Do#7' 'Do#8' 'Do0'
  'Do1' 'Do2' 'Do3' 'Do4' 'Do5' 'Do6' 'Do7' 'Do8' 'Fa#0' 'Fa#1' 'Fa#2'
@@ -145,6 +146,89 @@ Rezultatele antrenării pe Epoci:
 Legătura cu codul TensorFlow Simple Audio Recognition:
 - Codul din tutorialul TensorFlow este conceput pentru recunoașterea audio simplă, adaptat aici pentru a clasifica notele muzicale.
 - Folosește spectrograme pentru a transforma semnalele audio în date vizuale, procesate de rețeaua CNN.
+
+F1 Score: 0.5927912484412722
+
+
+
+VARIANTA 2 : CU 20 EPOCH SI MAI MULTE FILTRE
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #
+=================================================================
+ resizing (Resizing)         (None, 32, 32, 1)         0
+
+ normalization (Normalizati  (None, 32, 32, 1)         3
+ on)
+
+ conv2d (Conv2D)             (None, 30, 30, 64)        640
+
+ conv2d_1 (Conv2D)           (None, 28, 28, 128)       73856
+
+ conv2d_2 (Conv2D)           (None, 26, 26, 128)       147584
+
+ max_pooling2d (MaxPooling2  (None, 13, 13, 128)       0
+ D)
+
+ dropout (Dropout)           (None, 13, 13, 128)       0
+
+ flatten (Flatten)           (None, 21632)             0
+
+ dense (Dense)               (None, 256)               5538048
+
+ dropout_1 (Dropout)         (None, 256)               0
+
+ dense_1 (Dense)             (None, 102)               26214
+
+=================================================================
+Total params: 5786345 (22.07 MB)
+Trainable params: 5786342 (22.07 MB)
+Non-trainable params: 3 (16.00 Byte)
+_________________________________________________________________
+Epoch 1/20
+648/648 [==============================] - 162s 249ms/step - loss: 2.5915 - accuracy: 0.3612 - val_loss: 1.8106 - val_accuracy: 0.5201
+Epoch 2/20
+648/648 [==============================] - 159s 245ms/step - loss: 1.8003 - accuracy: 0.5199 - val_loss: 1.4843 - val_accuracy: 0.5956
+Epoch 3/20
+648/648 [==============================] - 135s 208ms/step - loss: 1.5437 - accuracy: 0.5712 - val_loss: 1.3377 - val_accuracy: 0.6245
+Epoch 4/20
+648/648 [==============================] - 107s 165ms/step - loss: 1.3831 - accuracy: 0.6067 - val_loss: 1.1712 - val_accuracy: 0.6759
+Epoch 5/20
+648/648 [==============================] - 111s 172ms/step - loss: 1.2640 - accuracy: 0.6345 - val_loss: 1.0738 - val_accuracy: 0.6946
+Epoch 6/20
+648/648 [==============================] - 110s 170ms/step - loss: 1.1569 - accuracy: 0.6604 - val_loss: 1.0035 - val_accuracy: 0.7199
+Epoch 7/20
+648/648 [==============================] - 107s 166ms/step - loss: 1.0684 - accuracy: 0.6825 - val_loss: 0.9162 - val_accuracy: 0.7286
+Epoch 8/20
+648/648 [==============================] - 114s 177ms/step - loss: 0.9954 - accuracy: 0.6996 - val_loss: 0.8564 - val_accuracy: 0.7533
+Epoch 9/20
+648/648 [==============================] - 107s 166ms/step - loss: 0.9366 - accuracy: 0.7151 - val_loss: 0.8104 - val_accuracy: 0.7608
+Epoch 10/20
+648/648 [==============================] - 106s 163ms/step - loss: 0.8730 - accuracy: 0.7315 - val_loss: 0.7717 - val_accuracy: 0.7776
+Epoch 11/20
+648/648 [==============================] - 293s 453ms/step - loss: 0.8321 - accuracy: 0.7452 - val_loss: 0.7458 - val_accuracy: 0.7871
+Epoch 12/20
+648/648 [==============================] - 106s 164ms/step - loss: 0.7927 - accuracy: 0.7548 - val_loss: 0.6906 - val_accuracy: 0.7925
+Epoch 13/20
+648/648 [==============================] - 103s 159ms/step - loss: 0.7421 - accuracy: 0.7693 - val_loss: 0.6996 - val_accuracy: 0.7961
+Epoch 14/20
+648/648 [==============================] - 1667s 3s/step - loss: 0.6997 - accuracy: 0.7795 - val_loss: 0.6626 - val_accuracy: 0.8033
+Epoch 15/20
+648/648 [==============================] - 101s 156ms/step - loss: 0.6849 - accuracy: 0.7827 - val_loss: 0.6346 - val_accuracy: 0.8143
+Epoch 16/20
+648/648 [==============================] - 104s 161ms/step - loss: 0.6531 - accuracy: 0.7945 - val_loss: 0.6275 - val_accuracy: 0.8131
+Epoch 17/20
+648/648 [==============================] - 108s 167ms/step - loss: 0.6336 - accuracy: 0.8000 - val_loss: 0.6124 - val_accuracy: 0.8205
+Epoch 18/20
+648/648 [==============================] - 121s 187ms/step - loss: 0.6092 - accuracy: 0.8078 - val_loss: 0.6043 - val_accuracy: 0.8170
+Epoch 19/20
+648/648 [==============================] - 111s 172ms/step - loss: 0.5856 - accuracy: 0.8155 - val_loss: 0.5820 - val_accuracy: 0.8274
+Epoch 20/20
+648/648 [==============================] - 105s 162ms/step - loss: 0.5623 - accuracy: 0.8195 - val_loss: 0.5736 - val_accuracy: 0.8322
+81/81 [==============================] - 10s 122ms/step - loss: 0.5812 - accuracy: 0.8260
+81/81 [==============================] - 3s 35ms/step
+81/81 [==============================] - 3s 35ms/step
+F1 Score: 0.7647748846170254
 
 
 
