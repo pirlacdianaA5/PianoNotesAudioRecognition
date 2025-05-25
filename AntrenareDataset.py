@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import tensorflow as tf
+from sklearn.metrics import f1_score
 
 from tensorflow.keras import layers
 from tensorflow.keras import models
@@ -182,12 +183,13 @@ model = models.Sequential([
     layers.Resizing(32, 32),
     # Normalize.
     norm_layer,
-    layers.Conv2D(32, 3, activation='relu'),
-    layers.Conv2D(64, 3, activation='relu'),
+    layers.Conv2D(64, 3, activation='relu'),  # Increased filters
+    layers.Conv2D(128, 3, activation='relu'),  # Increased filters
+    layers.Conv2D(128, 3, activation='relu'),  # Added new Conv2D layer
     layers.MaxPooling2D(),
-    layers.Dropout(0.25),
+    layers.Dropout(0.3),  # Increased dropout to prevent overfitting
     layers.Flatten(),
-    layers.Dense(128, activation='relu'),
+    layers.Dense(256, activation='relu'),  # Increased units
     layers.Dropout(0.5),
     layers.Dense(num_labels),
 ])
@@ -200,12 +202,12 @@ model.compile(
     metrics=['accuracy'],
 )
 
-EPOCHS = 10
+EPOCHS = 20  # Increased epochs
 history = model.fit(
     train_spectrogram_ds,
     validation_data=val_spectrogram_ds,
     epochs=EPOCHS,
-    callbacks=tf.keras.callbacks.EarlyStopping(verbose=1, patience=2),
+    callbacks=tf.keras.callbacks.EarlyStopping(verbose=1, patience=3),
 )
 
 metrics = history.history
@@ -247,6 +249,17 @@ plt.show()
 output_path = os.path.join(output_folder, f'diagram_{i + 1}.png')
 plt.savefig(output_path)
 plt.close()
+
+
+# Obține predicțiile și etichetele reale
+y_pred = model.predict(test_spectrogram_ds)
+y_pred = tf.argmax(y_pred, axis=1).numpy()
+y_true = tf.concat(list(test_spectrogram_ds.map(lambda s, lab: lab)), axis=0).numpy()
+
+# Calculează scorul F1###############################################################################################################
+f1 = f1_score(y_true, y_pred, average='macro')  # Poți folosi 'micro' sau 'weighted'
+print(f"F1 Score: {f1}")
+
 
 #################################### TESTING ##########################################################
 x = data_dir/'Do#0/keyboard_electronic_005-013-025.wav'
