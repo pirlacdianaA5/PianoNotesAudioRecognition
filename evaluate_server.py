@@ -15,7 +15,8 @@ def read_root():
     return {"message": "Server is running. Use WebSocket at /ws/predict"}
 
 # Load the model once
-model = tf.saved_model.load("saved")
+model = tf.saved_model.load("saved_200L2")
+
 class_names = ['Do#0', 'Do#1', 'Do#2', 'Do#3', 'Do#4', 'Do#5', 'Do#6', 'Do#7', 'Do#8',
                'Do0', 'Do1', 'Do2', 'Do3', 'Do4', 'Do5', 'Do6', 'Do7', 'Do8',
                'Fa#0', 'Fa#1', 'Fa#2', 'Fa#3', 'Fa#4', 'Fa#5', 'Fa#6', 'Fa#7',

@@ -8,10 +8,48 @@ import numpy as np
 import seaborn as sns
 import tensorflow as tf
 from sklearn.metrics import f1_score
-
 from tensorflow.keras import layers
 from tensorflow.keras import models
 from IPython import display
+from tensorflow.keras import regularizers
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+
+class F1ScoreCallback(tf.keras.callbacks.Callback):
+    def __init__(self, val_data):
+        super().__init__()
+        self.val_data = val_data
+        self.f1_scores = []  # Store F1 scores for all epochs
+
+    def on_epoch_end(self, epoch, logs=None):
+        y_true = []
+        y_pred = []
+
+        # Iterate through the validation dataset
+        for x_batch, y_batch in self.val_data:
+            preds = self.model.predict(x_batch)
+            y_true.extend(y_batch.numpy())
+            y_pred.extend(tf.argmax(preds, axis=1).numpy())
+
+        # Calculate F1 score
+        f1 = f1_score(y_true, y_pred, average='macro')
+        self.f1_scores.append(f1)
+        print(f"Epoch {epoch + 1}: F1 Score = {f1:.4f}")
+
+
+
+class PrintBestModelCallback(tf.keras.callbacks.Callback):
+    def __init__(self, filepath):
+        super().__init__()
+        self.filepath = filepath
+        self.best_epoch = None
+        self.best_val_loss = float('inf')
+
+    def on_epoch_end(self, epoch, logs=None):
+        current_val_loss = logs.get('val_loss')
+        if current_val_loss is not None and current_val_loss < self.best_val_loss:
+            self.best_val_loss = current_val_loss
+            self.best_epoch = epoch + 1
+            print(f"Best model saved at epoch {self.best_epoch}: {self.filepath}")
 
 # Set the seed value for experiment reproducibility.
 seed = 42
@@ -82,11 +120,8 @@ def get_spectrogram(waveform):
   # Convert the waveform to a spectrogram via a STFT.
   spectrogram = tf.signal.stft(
       waveform, frame_length=255, frame_step=128)
-  # Obtain the magnitude of the STFT.
+
   spectrogram = tf.abs(spectrogram)
-  # Add a `channels` dimension, so that the spectrogram can be used
-  # as image-like input data with convolution layers (which expect
-  # shape (`batch_size`, `height`, `width`, `channels`).
   spectrogram = spectrogram[..., tf.newaxis]
   return spectrogram
 
@@ -106,9 +141,6 @@ def plot_spectrogram(spectrogram, ax):
   if len(spectrogram.shape) > 2:
     assert len(spectrogram.shape) == 3
     spectrogram = np.squeeze(spectrogram, axis=-1)
-  # Convert the frequencies to log scale and transpose, so that the time is
-  # represented on the x-axis (columns).
-  # Add an epsilon to avoid taking a log of zero.
   log_spec = np.log(spectrogram.T + np.finfo(float).eps)
   height = log_spec.shape[0]
   width = log_spec.shape[1]
@@ -171,27 +203,31 @@ input_shape = example_spectrograms.shape[1:]
 print('Input shape:', input_shape)
 num_labels = len(label_names)
 
-# Instantiate the `tf.keras.layers.Normalization` layer.
 norm_layer = layers.Normalization()
-# Fit the state of the layer to the spectrograms
-# with `Normalization.adapt`.
 norm_layer.adapt(data=train_spectrogram_ds.map(map_func=lambda spec, label: spec))
+
+# Regularizare L2
+
+l2_reg = regularizers.l2(1e-4)
 
 model = models.Sequential([
     layers.Input(shape=input_shape),
-    # Downsample the input.
     layers.Resizing(32, 32),
-    # Normalize.
     norm_layer,
-    layers.Conv2D(64, 3, activation='relu'),  # Increased filters
-    layers.Conv2D(128, 3, activation='relu'),  # Increased filters
-    layers.Conv2D(128, 3, activation='relu'),  # Added new Conv2D layer
+
+    layers.Conv2D(64, 3, activation='relu', kernel_regularizer=l2_reg),
+    layers.Conv2D(128, 3, activation='relu', kernel_regularizer=l2_reg),
+    layers.Dropout(0.3),
+
+    layers.Conv2D(128, 3, activation='relu', kernel_regularizer=l2_reg),
     layers.MaxPooling2D(),
-    layers.Dropout(0.3),  # Increased dropout to prevent overfitting
+    layers.Dropout(0.3),
+
     layers.Flatten(),
-    layers.Dense(256, activation='relu'),  # Increased units
+    layers.Dense(256, activation='relu', kernel_regularizer=l2_reg),
     layers.Dropout(0.5),
-    layers.Dense(num_labels),
+
+    layers.Dense(num_labels)
 ])
 
 model.summary()
@@ -202,15 +238,52 @@ model.compile(
     metrics=['accuracy'],
 )
 
-EPOCHS = 20  # Increased epochs
+early_stop = EarlyStopping(
+    monitor='val_loss',
+    patience=10,
+    restore_best_weights=True,
+    verbose=1
+)
+
+checkpoint = ModelCheckpoint(
+    filepath='best_model_cnn.h5',
+    monitor='val_loss',
+    save_best_only=True,
+    mode='min',
+    verbose=1
+)
+print_best_model_callback = PrintBestModelCallback('best_model_cnn.h5')
+
+f1_callback = F1ScoreCallback(val_spectrogram_ds)
+
 history = model.fit(
     train_spectrogram_ds,
     validation_data=val_spectrogram_ds,
-    epochs=EPOCHS,
-    callbacks=tf.keras.callbacks.EarlyStopping(verbose=1, patience=3),
+    epochs=200,
+    callbacks=[f1_callback, checkpoint, print_best_model_callback]
 )
 
+# After training, print all F1 scores
+print("F1 Scores for all epochs:", f1_callback.f1_scores)
+
+# After training
 metrics = history.history
+epochs = range(1, len(metrics['loss']) + 1)
+
+# Plot training and validation loss
+plt.figure(figsize=(10, 6))
+plt.plot(epochs, metrics['loss'], label='Training Loss', color='blue')
+plt.plot(epochs, metrics['val_loss'], label='Validation Loss', color='orange')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Training and Validation Loss')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+
+# Plot training and validation accuracy
 plt.figure(figsize=(16,6))
 plt.subplot(1,2,1)
 plt.plot(history.epoch, metrics['loss'], metrics['val_loss'])
@@ -257,10 +330,22 @@ y_pred = tf.argmax(y_pred, axis=1).numpy()
 y_true = tf.concat(list(test_spectrogram_ds.map(lambda s, lab: lab)), axis=0).numpy()
 
 # Calculează scorul F1###############################################################################################################
-f1 = f1_score(y_true, y_pred, average='macro')  # Poți folosi 'micro' sau 'weighted'
+f1 = f1_score(y_true, y_pred, average='macro')
 print(f"F1 Score: {f1}")
 
-
+# Plot F1 scores for all epochs
+plt.figure(figsize=(10, 6))
+epochs = range(1, len(f1_callback.f1_scores) + 1)
+plt.plot(epochs, f1_callback.f1_scores, label='F1 Score', color='green')
+plt.xlabel('Epochs')
+plt.ylabel('F1 Score')
+plt.title('F1 Score per Epoch')
+plt.legend()
+plt.grid(True)
+plt.show()
+output_path = os.path.join(output_folder, 'f1_score_diagram.png')
+plt.savefig(output_path)
+plt.close()
 #################################### TESTING ##########################################################
 x = data_dir/'Do#0/keyboard_electronic_005-013-025.wav'
 x = tf.io.read_file(str(x))
@@ -320,6 +405,19 @@ class ExportModel(tf.Module):
                 'class_names': class_names}
 
 export = ExportModel(model)
-tf.saved_model.save(export, "saved")
-imported = tf.saved_model.load("saved")
+tf.saved_model.save(export, "saved_200L2")
+imported = tf.saved_model.load("saved_200L2")
 imported(waveform[tf.newaxis, :])
+
+
+
+if __name__ == '__main__':
+    history = model.fit(
+        train_spectrogram_ds,
+        validation_data=val_spectrogram_ds,
+        epochs=200,
+        callbacks=[f1_callback, checkpoint, print_best_model_callback]
+    )
+
+    # After training, print all F1 scores
+    print("F1 Scores for all epochs:", f1_callback.f1_scores)

@@ -231,7 +231,21 @@ Epoch 20/20
 F1 Score: 0.7647748846170254
 
 
+3. PT 30 DE EPOCHS
 
+
+
+
+
+
+4.PT 70 DE EPOCHS
+
+
+
+
+
+
++++++++++++++++++++++++++++===========================================================================================================
 ###########################################################################################################################################
 ####################################################################################################################################################
 2.RNN ANTRENARE(Rețea Neuronală Recursivă)
@@ -420,3 +434,5 @@ MLP: Bun pentru baseline, dar pierde informația spațială și temporală.
 CNN: Ideal pentru spectrograme – învață tipare locale (note, armonici).
 
 RNN: Bun pentru date secvențiale – menține ordinea temporală (ar fi ideal pentru secvențe de note în timp).
+
+!!!!!!!LSTM!!!!!!!!!!! - Bun pentru secvențe lungi – păstrează informația pe termen lung (ideal pentru melodii complexe).

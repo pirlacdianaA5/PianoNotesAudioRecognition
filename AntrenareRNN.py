@@ -180,7 +180,7 @@ model = models.Sequential([
     layers.Input(shape=input_shape),
     layers.Resizing(32, 32),
     layers.Normalization(),
-    layers.Reshape((32, 32)),  # Reshape to (timesteps, features)
+    layers.Reshape((32, 32)),
     layers.SimpleRNN(64, activation='tanh', return_sequences=True),
     layers.SimpleRNN(64, activation='tanh'),
     layers.Dense(128, activation='relu'),
